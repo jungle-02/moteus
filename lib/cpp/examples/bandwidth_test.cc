@@ -40,14 +40,19 @@ static double GetNow() {
 int main(int argc, char** argv) {
   using namespace mjbots;
 
-  const std::vector<std::string> args_in(argv, argv + argc);
-  auto args = moteus::Controller::ProcessTransportArgs(args_in);
-  auto transport = moteus::Controller::MakeSingletonTransport({});
+  // const std::vector<std::string> args_in(argv, argv + argc);
+  // auto args = moteus::Controller::ProcessTransportArgs(args_in);
+  // auto transport = moteus::Controller::MakeSingletonTransport({});
 
-  // Just for some kind of "--help".
-  moteus::Controller::DefaultArgProcess(argc, argv);
+  // // Just for some kind of "--help".
+  // moteus::Controller::DefaultArgProcess(argc, argv);
+  // args.erase(args.begin());  // our name
+  
+  moteus::Fdcanusb::Options transport_options;
+  auto transport = std::make_shared<moteus::Fdcanusb>(
+      "/dev/ttyACM0", transport_options);
 
-  args.erase(args.begin());  // our name
+  std::vector<std::string> args(argv + 1, argv + argc);
 
   auto parse_bool = [&](const std::string& name) {
     auto it = std::find(args.begin(), args.end(), name);

@@ -21,14 +21,26 @@
 
 #include "moteus.h"
 
-int main(int argc, char** argv) {
+int main(int /*argc*/, char** /*argv*/) {
   using namespace mjbots;
 
-  // Let the user configure a default transport.
-  moteus::Controller::DefaultArgProcess(argc, argv);
+  // // Let the user configure a default transport.
+  // moteus::Controller::DefaultArgProcess(argc, argv);
+  
+  // moteus::Controller controller;
+  // 1. Cau hinh Transport (Cach giao tiep)
+  moteus::Fdcanusb::Options transport_options;
+  auto transport = std::make_shared<moteus::Fdcanusb>(
+    "/dev/ttyACM0", transport_options); // Chi dinh cong USB da gan vao Docker
 
-  moteus::Controller controller;
-
+  // 2. Cau hinh Controller
+  moteus::Controller::Options options;
+  options.id = 1; // Chi dinh ID cua Moteus
+  options.transport = transport;
+  
+  // 3. Khoi tao Controller voi cac tuy chon day du
+  moteus::Controller controller(options);
+  
   // When using the diagnostic protocol, it is important to know that
   // applications like tview may leave the controller "spewing" on the
   // diagnostic channel, i.e. sending unsolicited data.  In order stop

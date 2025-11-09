@@ -22,13 +22,17 @@
 
 #include "moteus.h"
 
-int main(int argc, char** argv) {
+int main(int /*argc*/, char** /*argv*/) {
   using namespace mjbots;
 
-  moteus::Controller::DefaultArgProcess(argc, argv);
+  // moteus::Controller::DefaultArgProcess(argc, argv);
 
   moteus::Controller::Options options;
   options.id = 1;
+
+   moteus::Fdcanusb::Options transport_options;
+  options.transport = std::make_shared<moteus::Fdcanusb>(
+      "/dev/ttyACM0", transport_options);
 
   // Only position and velocity are sent by default when sending
   // position mode commands.  If you want to send any other fields you
