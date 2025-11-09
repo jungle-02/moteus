@@ -105,3 +105,20 @@ mbed_repository(
 load("@com_github_mjbots_bazel_deps//tools/workspace:default.bzl",
      bazel_deps_add = "add_default_repositories")
 bazel_deps_add()
+
+# hedron compile commands extractor (for clangd / compile_commands.json) ---
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "hedron_compile_commands",
+    # Commit/URL: co the cap nhat neu muon
+    url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/0e990032f3c5a866e72615cf67e5ce22186dcb97.tar.gz",
+    strip_prefix = "bazel-compile-commands-extractor-0e990032f3c5a866e72615cf67e5ce22186dcb97",
+)
+
+load("@hedron_compile_commands//:workspace_setup.bzl", "hedron_compile_commands_setup")
+hedron_compile_commands_setup()
+
+# Them dong transitive neu gap thieu mot so dependency khi thu thap
+load("@hedron_compile_commands//:workspace_setup_transitive.bzl", "hedron_compile_commands_setup_transitive")
+hedron_compile_commands_setup_transitive()

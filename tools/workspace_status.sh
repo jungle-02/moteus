@@ -1,20 +1,21 @@
-#!/bin/bash
+#!/bin/sh
+# workspace_status.sh - Cung cap thong tin trang thai cho Bazel
 
-GIT_REV=$(git rev-parse HEAD)
-if [[ $? != 0 ]];
-then
-    exit 1
-fi
+# Lay commit hien tai (neu dang trong repo Git)
+GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-echo "BUILD_SCM_REVISION ${GIT_REV}"
+# Kiem tra neu co thay doi chua commit
+GIT_DIRTY=$(git diff --quiet 2>/dev/null || echo "-dirty")
 
-# Check whether there are any uncommitted changes.
-git diff-index --quiet HEAD --
-if [[ $? == 0 ]];
-then
-    TREE_STATUS=0
-else
-    TREE_STATUS=1
-fi
+# Thoi gian build (dinh dang ISO 8601)
+BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-echo "BUILD_SCM_STATUS ${TREE_STATUS}"
+# Ten nguoi build (neu co)
+USER_NAME=$(whoami 2>/dev/null || echo "unknown")
+
+# Xuat ra cac bien de Bazel ghi vao stable-status.txt
+echo "STABLE_GIT_COMMIT ${GIT_COMMIT}${GIT_DIRTY}"
+echo "STABLE_BUILD_TIME ${BUILD_TIME}"
+echo "STABLE_USER ${USER_NAME}"
+
+exit 0
