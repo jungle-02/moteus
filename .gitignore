@@ -16,3 +16,11 @@ hw/x1/#auto_saved_files#
 # MkDocs
 site/
 .venv-docs/
+
+# Bazel outputs
+/bazel-out/
+/bazel-*
+
+# Bazel external dependencies
+/external/
+
