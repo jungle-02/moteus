@@ -19,10 +19,10 @@
 
 #include "mjlib/base/visitor.h"
 
-#include "fw_R_estimated/error.h"
-#include "fw_R_estimated/measured_hw_rev.h"
-#include "fw_R_estimated/pid.h"
-#include "fw_R_estimated/simple_pi.h"
+#include "fw_estimate/error.h"
+#include "fw_estimate/measured_hw_rev.h"
+#include "fw_estimate/pid.h"
+#include "fw_estimate/simple_pi.h"
 
 namespace moteus {
 
@@ -146,10 +146,10 @@ struct BldcServoStatus {
   float torque_Nm = 0.0f;
   float power_W = 0.0f;
 
-  // Khai bao bien can estimate RLS
+  // --- RLS ESTIMATION ---
   float rls_R_hat = 0.0f;
+  float rls_L_hat = 0.0f;
   float rls_flux_hat = 0.0f;
-  float rls_Lq_hat = 0.0f;
 
   float velocity_filt = 0.0f;
 
@@ -250,9 +250,10 @@ struct BldcServoStatus {
     a->Visit(MJ_NVP(torque_Nm));
     a->Visit(MJ_NVP(power_W));
 
-    a->Visit(MJ_NVP(rls_R_hat)); // Them rls_R_hat vao Serialize
+    // Them bien RLS vao Serialize
+    a->Visit(MJ_NVP(rls_R_hat));
+    a->Visit(MJ_NVP(rls_L_hat));
     a->Visit(MJ_NVP(rls_flux_hat));
-    a->Visit(MJ_NVP(rls_Lq_hat));
 
     a->Visit(MJ_NVP(velocity_filt));
 

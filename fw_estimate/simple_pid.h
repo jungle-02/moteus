@@ -20,7 +20,7 @@
 #include "mjlib/base/limit.h"
 #include "mjlib/base/visitor.h"
 
-#include "fw_R_estimated/moteus_hw.h"
+#include "fw_estimate/moteus_hw.h"
 
 namespace moteus {
 

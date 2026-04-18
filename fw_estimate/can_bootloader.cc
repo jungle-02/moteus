@@ -28,8 +28,8 @@
 #include "mjlib/multiplex/format.h"
 #include "mjlib/multiplex/stream.h"
 
-#include "fw_R_estimated/git_info.h"
-#include "fw_R_estimated/stm32g4xx_fdcan_typedefs.h"
+#include "fw_estimate/git_info.h"
+#include "fw_estimate/stm32g4xx_fdcan_typedefs.h"
 
 namespace {
 using mjlib::multiplex::Format;

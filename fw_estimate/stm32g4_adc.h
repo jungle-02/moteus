@@ -16,8 +16,8 @@
 
 #include "mbed.h"
 
-#include "fw_R_estimated/ccm.h"
-#include "fw_R_estimated/millisecond_timer.h"
+#include "fw_estimate/ccm.h"
+#include "fw_estimate/millisecond_timer.h"
 
 namespace moteus {
 

@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "fw_R_estimated/moteus_controller.h"
+#include "fw_estimate/moteus_controller.h"
 
-#include "fw_R_estimated/aux_port.h"
-#include "fw_R_estimated/drv8323.h"
-#include "fw_R_estimated/moteus_hw.h"
-#include "fw_R_estimated/motor_position.h"
+#include "fw_estimate/aux_port.h"
+#include "fw_estimate/drv8323.h"
+#include "fw_estimate/moteus_hw.h"
+#include "fw_estimate/motor_position.h"
 #include "mjlib/base/limit.h"
 
-#include "fw_R_estimated/moteus_math.h"
+#include "fw_estimate/moteus_math.h"
 
 namespace micro = mjlib::micro;
 namespace multiplex = mjlib::multiplex;
@@ -126,16 +126,16 @@ Value ScalePower(float value, size_t type) {
   return ScaleMapping(value, 10.0f, 0.05f, 0.0001f, type);
 }
 
-// cau hình Scale r_hat
+// cau hình Scale RLS
 Value ScaleResistance(float value, size_t type) {
   // Mapping phan giai: int8 (0.1 Ohm), int16 (0.001 Ohm), int32 (0.00001 Ohm)
   return ScaleMapping(value, 0.1f, 0.001f, 0.00001f, type);
 }
 Value ScaleFlux(float value, size_t type) {
-  return ScaleMapping(value, 0.01f, 0.0001f, 0.000001f, type);
+  return ScaleMapping(value, 1e-2f, 1e-4f, 1e-6f, type);
 }
 Value ScaleInductance(float value, size_t type) {
-  return ScaleMapping(value, 0.001f, 0.00001f, 0.0000001f, type);
+  return ScaleMapping(value, 1e-4f, 1e-6f, 1e-8f, type);
 }
 
 int8_t ReadIntMapping(Value value) {
@@ -371,9 +371,10 @@ enum class Register {
 
   kUuidMaskCapable = 0x158,
 
-  kRlsRHat = 0x160,  //ID Register r_hat
+  // --- RLS REGISTERS ---
+  kRlsRHat = 0x160,
   kRlsFluxHat = 0x161,
-  kRlsLqHat = 0x162,
+  kRlsLHat = 0x162,
 };
 
 aux::AuxHardwareConfig GetAux1HardwareConfig() {
@@ -795,7 +796,11 @@ class MoteusController::Impl : public multiplex::MicroServer::Server {
       case Register::kQCurrent:
       case Register::kDCurrent:
       case Register::kAbsPosition:
-      case Register::kRlsRHat: //READ-ONLY r_hat
+      //Cam ghi de
+      case Register::kRlsRHat:
+      case Register::kRlsLHat:
+      case Register::kRlsFluxHat:
+
       case Register::kPower:
       case Register::kTrajectoryComplete:
       case Register::kHomeState:
@@ -905,15 +910,15 @@ class MoteusController::Impl : public multiplex::MicroServer::Server {
         return ScalePower(bldc_.status().power_W, type);
       }
 
-      // Gan du lieu r_hat vao
+      // Tra dư lieu ve register
       case Register::kRlsRHat: {
         return ScaleResistance(bldc_.status().rls_R_hat, type);
       }
       case Register::kRlsFluxHat: {
 		return ScaleFlux(bldc_.status().rls_flux_hat, type);
 	  }
-	  case Register::kRlsLqHat: {
-		return ScaleInductance(bldc_.status().rls_Lq_hat, type);
+	  case Register::kRlsLHat: {
+		return ScaleInductance(bldc_.status().rls_L_hat, type);
 	  }
 
       case Register::kTrajectoryComplete: {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "fw_R_estimated/../stm32_i2c_timing.h"
+#include "fw_estimate/../stm32_i2c_timing.h"
 
 #include <boost/test/auto_unit_test.hpp>
 

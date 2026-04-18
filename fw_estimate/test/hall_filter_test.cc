@@ -17,7 +17,7 @@
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
-#include "fw_R_estimated/../motor_position.h"
+#include "fw_estimate/../motor_position.h"
 
 #include "mjlib/micro/test/persistent_config_fixture.h"
 

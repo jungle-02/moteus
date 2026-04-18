@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "fw_R_estimated/firmware_info.h"
+#include "fw_estimate/firmware_info.h"
 
-#include "fw_R_estimated/measured_hw_rev.h"
-#include "fw_R_estimated/moteus_hw.h"
+#include "fw_estimate/measured_hw_rev.h"
+#include "fw_estimate/moteus_hw.h"
 
 namespace moteus {
 

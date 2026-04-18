@@ -18,9 +18,9 @@
 
 #include "mbed.h"
 
-#include "fw_R_estimated/aux_common.h"
-#include "fw_R_estimated/ccm.h"
-#include "fw_R_estimated/stm32_gpio_interrupt_in.h"
+#include "fw_estimate/aux_common.h"
+#include "fw_estimate/ccm.h"
+#include "fw_estimate/stm32_gpio_interrupt_in.h"
 
 namespace moteus {
 namespace aux {

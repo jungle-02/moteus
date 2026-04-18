@@ -18,12 +18,12 @@
 #include "mjlib/micro/pool_ptr.h"
 #include "mjlib/multiplex/micro_server.h"
 
-#include "fw_R_estimated/bldc_servo.h"
-#include "fw_R_estimated/clock_manager.h"
-#include "fw_R_estimated/firmware_info.h"
-#include "fw_R_estimated/millisecond_timer.h"
-#include "fw_R_estimated/system_info.h"
-#include "fw_R_estimated/uuid.h"
+#include "fw_estimate/bldc_servo.h"
+#include "fw_estimate/clock_manager.h"
+#include "fw_estimate/firmware_info.h"
+#include "fw_estimate/millisecond_timer.h"
+#include "fw_estimate/system_info.h"
+#include "fw_estimate/uuid.h"
 
 namespace moteus {
 

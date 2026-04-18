@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "fw_R_estimated/millisecond_timer.h"
-#include "fw_R_estimated/moteus_hw.h"
-#include "fw_R_estimated/stm32.h"
+#include "fw_estimate/millisecond_timer.h"
+#include "fw_estimate/moteus_hw.h"
+#include "fw_estimate/stm32.h"
 
 extern "C" {
 void hard_fault_handler_c (unsigned int * hardfault_args)

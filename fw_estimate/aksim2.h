@@ -14,9 +14,9 @@
 
 #pragma once
 
-#include "fw_R_estimated/aux_common.h"
-#include "fw_R_estimated/millisecond_timer.h"
-#include "fw_R_estimated/stm32g4_dma_uart.h"
+#include "fw_estimate/aux_common.h"
+#include "fw_estimate/millisecond_timer.h"
+#include "fw_estimate/stm32g4_dma_uart.h"
 
 namespace moteus {
 

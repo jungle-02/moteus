@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "fw_R_estimated/bldc_servo.h"
+#include "fw_estimate/bldc_servo.h"
 
 #include <atomic>
 #include <cmath>
@@ -25,13 +25,14 @@
 #include "mjlib/base/assert.h"
 #include "mjlib/base/windowed_average.h"
 
-#include "fw_R_estimated/bldc_servo_position.h"
-#include "fw_R_estimated/foc.h"
-#include "fw_R_estimated/moteus_math.h"
-#include "fw_R_estimated/moteus_hw.h"
-#include "fw_R_estimated/stm32g4_adc.h"
-#include "fw_R_estimated/thermistor.h"
-#include "fw_R_estimated/torque_model.h"
+#include "fw_estimate/bldc_servo_position.h"
+#include "fw_estimate/foc.h"
+#include "fw_estimate/moteus_math.h"
+#include "fw_estimate/moteus_hw.h"
+#include "fw_estimate/stm32g4_adc.h"
+#include "fw_estimate/thermistor.h"
+#include "fw_estimate/torque_model.h"
+#include "fw_estimate/parameter_estimator.h"
 
 #if defined(TARGET_STM32G4)
 #include "fw_R_estimated/stm32g4_async_uart.h"
@@ -891,138 +892,6 @@ private:
     DWT->CYCCNT = 0;
 #endif
 
-    // #############################################################
-	// ### BAT DAU THUAT TOAN UOC LUONG R (HYBRID RLS + THERMAL) ###
-	// #############################################################
-
-    bool rls_R_updated = false;
-
-        if (current_control()) {
-            const float Vd = old_d_V;
-            const float Vq = old_q_V;
-            const float Id_real = status_.d_A;
-            const float Iq_real = status_.q_A;
-            const float we = position_.velocity /
-                             motor_position_->config()->rotor_to_output_ratio *
-                             motor_.poles * 0.5f * k2Pi;
-
-            const float Ld = rls_Lq_hat_;
-
-            // --- 1. BỘ LỌC TÍN HIỆU (NHANH, TRÁNH TRỄ PHA) ---
-            // Tăng tốc độ lọc để các biến đồng bộ pha với nhau khi chạy sóng Sine
-            const float alpha_f = 0.05f;
-            static float Vd_f = 0.0f, Vq_f = 0.0f, Iq_f = 0.0f, Id_f = 0.0f, we_f = 0.0f;
-
-            Vd_f = (1.0f - alpha_f) * Vd_f + alpha_f * Vd;
-            Vq_f = (1.0f - alpha_f) * Vq_f + alpha_f * Vq;
-            Iq_f = (1.0f - alpha_f) * Iq_f + alpha_f * Iq_real;
-            Id_f = (1.0f - alpha_f) * Id_f + alpha_f * Id_real;
-            we_f = (1.0f - alpha_f) * we_f + alpha_f * we;
-
-            // Bù nhiễu Inverter (Deadtime & Diode drop)
-            const float V_dt_comp_q = (Iq_f >= 0.0f) ? 0.05f : -0.05f;
-            const float V_loss_q = V_dt_comp_q + (Iq_f * 0.010f);
-
-            const float V_dt_comp_d = (std::abs(Id_f) > 0.2f) ? ((Id_f > 0) ? 0.05f : -0.05f) : 0.0f;
-            const float V_loss_d = V_dt_comp_d + (Id_f * 0.010f);
-
-            // --- 2. LOGIC CÁCH LY TRẠNG THÁI (STRICT DECOUPLING) ---
-            // Yêu cầu dòng Iq tối thiểu 1.0A để tín hiệu lấn át nhiễu Inverter
-            const bool is_iq_sufficient = std::abs(Iq_f) > 1.0f && std::abs(Iq_f) < 30.0f;
-
-            // Chia vùng tốc độ: Dưới 3.0 là tĩnh, Trên 15.0 là cao tốc. Từ 3->15 là vùng cấm RLS.
-            const bool is_we_very_low = std::abs(we_f) < 3.0f;
-            const bool is_we_high = std::abs(we_f) > 15.0f;
-
-            if (is_iq_sufficient) {
-
-                // ==============================================================================
-                // VÙNG CAO TỐC: ƯỚC LƯỢNG TỪ THÔNG (Phi_m) VÀ ĐIỆN CẢM (Lq)
-                // Lực điện động (Back-EMF) đủ lớn để lấn át sai số của điện trở R
-                // ==============================================================================
-                if (is_we_high) {
-                    // 1. LUỒNG TỪ THÔNG (Phi_m)
-                    float y_flux = (Vq_f - V_loss_q) - (rls_R_hat_ * Iq_f) - (we_f * Ld * Id_f);
-                    float phi_flux = we_f;
-                    float K_flux = rls_P_flux_ * phi_flux / (rls_lambda_ + phi_flux * rls_P_flux_ * phi_flux);
-                    float error_flux = y_flux - phi_flux * rls_flux_hat_;
-
-                    // Deadzone 0.05V: Bỏ qua nhiễu nhỏ, chỉ update khi có độ lệch thật sự
-                    if (std::abs(error_flux) > 0.05f) {
-                        rls_flux_hat_ += K_flux * error_flux;
-                        rls_P_flux_ = (rls_P_flux_ - K_flux * phi_flux * rls_P_flux_) / rls_lambda_;
-                    }
-
-                    // Chống Covariance Windup (không cho P quá bé hoặc quá to)
-                    if (rls_P_flux_ > 0.01f) rls_P_flux_ = 0.01f;
-                    if (rls_P_flux_ < 0.00001f) rls_P_flux_ = 0.00001f;
-
-                    float flux_nom = 60.0f / (sqrt(3.0f) * k2Pi * motor_.Kv * (motor_.poles/2.0f));
-                    rls_flux_hat_ = Limit(rls_flux_hat_, flux_nom * 0.7f, flux_nom * 1.3f);
-
-                    // 2. LUỒNG ĐIỆN CẢM (Lq)
-                    float y_L = Vd_f - V_loss_d - (rls_R_hat_ * Id_f);
-                    float phi_L = -we_f * Iq_f;
-                    float K_L = rls_P_L_ * phi_L / (rls_lambda_ + phi_L * rls_P_L_ * phi_L);
-                    float error_L = y_L - phi_L * rls_Lq_hat_;
-
-                    if (std::abs(error_L) > 0.05f) {
-                        rls_Lq_hat_ += K_L * error_L;
-                        rls_P_L_ = (rls_P_L_ - K_L * phi_L * rls_P_L_) / rls_lambda_;
-                    }
-
-                    if (rls_P_L_ > 0.01f) rls_P_L_ = 0.01f;
-                    if (rls_P_L_ < 0.000001f) rls_P_L_ = 0.000001f;
-
-                    rls_Lq_hat_ = Limit(rls_Lq_hat_, 0.000005f, 0.001000f);
-                }
-
-                // ==============================================================================
-                // VÙNG ĐỨNG YÊN HOẶC GHÌM TẢI (STALL): ƯỚC LƯỢNG ĐIỆN TRỞ R
-                // Tốc độ gần bằng 0, Vq lúc này xấp xỉ R*Iq, đây là lúc đo R chuẩn nhất
-                // ==============================================================================
-                else if (is_we_very_low) {
-                    float y_R = (Vq_f - V_loss_q) - (we_f * rls_flux_hat_) - (we_f * Ld * Id_f);
-                    float phi_R = Iq_f;
-                    float K_R = rls_P_R_ * phi_R / (rls_lambda_ + phi_R * rls_P_R_ * phi_R);
-                    float error_R = y_R - phi_R * rls_R_hat_;
-
-                    // Deadzone 0.1V cho dòng điện: Dòng điện hay bị nhiễu switching
-                    if (std::abs(error_R) > 0.1f) {
-                        rls_R_hat_ += K_R * error_R;
-                        rls_P_R_ = (rls_P_R_ - K_R * phi_R * rls_P_R_) / rls_lambda_;
-                    }
-
-                    if (rls_P_R_ > 0.01f) rls_P_R_ = 0.01f;
-                    if (rls_P_R_ < 0.00001f) rls_P_R_ = 0.00001f;
-
-                    rls_R_hat_ = Limit(rls_R_hat_, 0.01f, 0.3f);
-                    rls_R_updated = true;
-
-                    // Cập nhật điểm mỏ neo nhiệt độ để track khi RLS đóng băng
-                    rls_anchor_R_ = rls_R_hat_;
-                    rls_anchor_T_ = config_.enable_motor_temperature ? status_.filt_motor_temp_C : status_.filt_fet_temp_C;
-                }
-
-                // Nếu 3.0 < we < 15.0, thuật toán chủ động BỎ QUA không làm gì cả.
-                // Đây là vùng chuyển tiếp, phương trình sẽ đổ lỗi chéo, làm hỏng dữ liệu.
-            }
-        }
-
-        // --- 3. MÔ HÌNH NHIỆT (BACKUP KHI RLS ĐÓNG BĂNG) ---
-        // Luôn chạy khi động cơ ở vùng chuyển tiếp hoặc cao tốc
-        if (!rls_R_updated) {
-            const float current_temp = config_.enable_motor_temperature ? status_.filt_motor_temp_C : status_.filt_fet_temp_C;
-            const float delta_T = current_temp - rls_anchor_T_;
-            float thermal_R = rls_anchor_R_ * (1.0f + 0.00393f * delta_T);
-            rls_R_hat_ = Limit(thermal_R, 0.01f, 0.3f);
-        }
-
-        status_.rls_R_hat = rls_R_hat_;
-        status_.rls_flux_hat = rls_flux_hat_;
-        status_.rls_Lq_hat = rls_Lq_hat_;
-        // #############################################################
-
     // No matter what mode we are in, always sample our ADC and
     // position sensors.
     ISR_DoSenseCritical();
@@ -1613,6 +1482,41 @@ private:
 
     control_.Clear();
 
+    // --- BAT DAU RLS estimator ---
+
+    // chi chay khi o che do dong kin
+    if (status_.mode == kCurrent || status_.mode == kPosition || status_.mode == kStayWithinBounds || status_.mode == kVoltageDq) {
+
+          // lay U I tu chu ky truoc
+          float ud = old_d_V;
+          float uq = old_q_V;
+          float id = status_.d_A;
+          float iq = status_.q_A;
+
+          // tinh van toc dien
+          float we = position_.velocity / motor_position_->config()->rotor_to_output_ratio * motor_.poles * 0.5f * k2Pi;
+          float dt = rate_config_.period_s;
+          float current_temp_C = config_.enable_motor_temperature ? status_.filt_motor_temp_C : status_.filt_fet_temp_C;
+
+          // chi update khi co toc do
+          if (std::abs(we) > 5.0f) {
+              parameter_estimator_.Update(id, iq, ud, uq, we, dt, current_temp_C);
+
+            // lay ket qua tu estimator
+            rls_R_hat_    = parameter_estimator_.GetR();
+            rls_Ld_hat_   = parameter_estimator_.GetLd();
+            rls_Lq_hat_   = parameter_estimator_.GetLq();
+            rls_L_hat_    = parameter_estimator_.GetLq();
+            rls_flux_hat_ = parameter_estimator_.GetFai();
+
+            // cap nhat telemetry
+            status_.rls_R_hat = rls_R_hat_;
+            status_.rls_L_hat = rls_L_hat_;
+            status_.rls_flux_hat = rls_flux_hat_;
+          }
+        }
+        // --- KET THUC estimator ---
+
     if (!std::isnan(status_.timeout_s) && status_.timeout_s > 0.0f) {
       status_.timeout_s =
           std::max(0.0f, status_.timeout_s - rate_config_.period_s);
@@ -1797,28 +1701,24 @@ private:
     status_.adc_cur3_offset = new_adc3_offset;
     status_.mode = kCalibrationComplete;
 
-    // --- KHOI TAO BIEN RLS ---
-    // Chi lay R mac dinh tu file config o LAN DAU TIEN bat dien
-        if (!rls_initialized_) {
-            rls_R_hat_ = motor_.resistance_ohm;
-            rls_flux_hat_ = 60 / (sqrt(3) * k2Pi * motor_.Kv * (motor_.poles/2)) ; // Từ thông định mức
-            rls_Lq_hat_ = motor_.resistance_ohm * config_.pid_dq.kp / config_.pid_dq.ki;
+    // --- KHOI TAO CHO RLS  ---
 
-            rls_P_R_ = 1.0f;
-            rls_P_flux_ = 1.0f;
-            rls_P_L_ = 1.0f;
+    // khoi tao tham so ban dau cho RLS
+	const float init_R = motor_.resistance_ohm;
+	const float init_flux = (motor_.Kv > 0.0f)
+		? (60.0f / (1.73205081f * k2Pi * motor_.Kv * (motor_.poles / 2.0f)))
+		: 0.0027f;
+	const float init_Lq = (std::abs(config_.pid_dq.ki) > 1e-6f)
+		? (motor_.resistance_ohm * config_.pid_dq.kp / config_.pid_dq.ki)
+		: 2.1715e-05f;
+	const float current_temp_C = config_.enable_motor_temperature
+		? status_.filt_motor_temp_C
+		: status_.filt_fet_temp_C;
 
-			rls_initialized_ = true;
-        }
+	// reset estimator voi tham so ban dau
+	parameter_estimator_.Reset(init_R, init_Lq, init_flux, current_temp_C);
+	// --------------------------------------
 
-    status_.rls_R_hat = rls_R_hat_;     // Cap nhat status
-    status_.rls_flux_hat = rls_flux_hat_;
-    status_.rls_Lq_hat = rls_Lq_hat_;
-
-    // Neo nhiet do va dien tro ngay khi vua calib xong
-    rls_anchor_R_ = rls_R_hat_;
-    rls_anchor_T_ = config_.enable_motor_temperature ? status_.filt_motor_temp_C : status_.filt_fet_temp_C;
-    // --------------------------
   }
 
   void ISR_DoPwmControl(const Vec3 &pwm) MOTEUS_CCM_ATTRIBUTE {
@@ -2041,16 +1941,16 @@ private:
     };
 
     if (!config_.voltage_mode_control) {
-		const float denorm_d_V =
-				  pid_d_.Apply(status_.d_A, i_d_A, rate_config_.rate_hz) +
-				  i_d_A * config_.current_feedforward * rls_R_hat_ -
-				  we * rls_Lq_hat_ * i_q_A; // Bù chéo điện cảm Lq
+    	const float denorm_d_V =
+    	          pid_d_.Apply(status_.d_A, i_d_A, rate_config_.rate_hz) +
+    	          i_d_A * config_.current_feedforward * rls_R_hat_ -
+    	          we * rls_Lq_hat_ * i_q_A; // Sửa status_.rls_Lq_hat thành rls_Lq_hat_
 
-			  const float denorm_q_V =
-				  pid_q_.Apply(status_.q_A, i_q_A, rate_config_.rate_hz) +
-				  i_q_A * config_.current_feedforward * rls_R_hat_ +
-				  we * rls_Lq_hat_ * i_d_A + // Bù chéo điện cảm Ld (Giả thiết Ld ~ Lq với BLDC)
-				  (feedforward_velocity_rotor * config_.bemf_feedforward * (rls_flux_hat_ * k2Pi)); // Bù Back-EMF bằng Từ thông ước lượng
+    	      const float denorm_q_V =
+    	          pid_q_.Apply(status_.q_A, i_q_A, rate_config_.rate_hz) +
+    	          i_q_A * config_.current_feedforward * rls_R_hat_ +
+    	          we * rls_Ld_hat_ * i_d_A + // Sửa status_.rls_Ld_hat thành rls_Ld_hat_
+    	          (feedforward_velocity_rotor * config_.bemf_feedforward * (rls_flux_hat_ * k2Pi));
 
 			  auto [d_V, q_V, final_limit_code] =
 				  limit_to_max_voltage(denorm_d_V, denorm_q_V, limit_code);
@@ -2076,8 +1976,8 @@ private:
                                 i_q_A * i_q_A * motor_.resistance_ohm);
 
       auto [d_V, q_V, final_limit_code] = limit_to_max_voltage(
-          i_d_A * rls_R_hat_ - we * rls_Lq_hat_ * i_q_A,
-		  i_q_A * rls_R_hat_ + we * rls_Lq_hat_ * i_d_A + (feedforward_velocity_rotor * config_.bemf_feedforward * (rls_flux_hat_ * k2Pi)),
+          i_d_A * rls_R_hat_ - we * rls_L_hat_ * i_q_A,
+		  i_q_A * rls_R_hat_ + we * rls_L_hat_ * i_d_A + (feedforward_velocity_rotor * config_.bemf_feedforward * (rls_flux_hat_ * k2Pi)),
 		  limit_code);
 
       if (final_limit_code != errc::kSuccess) {
@@ -2709,26 +2609,16 @@ private:
   const bool family3_ = (g_measured_hw_family == 3);
 
   // --- Khai bao bien trang thai RLS ---
-  	float rls_R_hat_ = 0.0f;
-	float rls_flux_hat_ = 0.0f;
-	float rls_Lq_hat_ = 0.0f;
 
-	float rls_P_R_ = 1.0f;    // P của R khởi tạo nhỏ để tránh hội tụ sốc
-	float rls_P_flux_ = 1.0f; // P của Từ thông
-	float rls_P_L_ = 1.0f;    // P của Điện cảm
+  // object uoc luong tham so
+  ParameterEstimatorRLS parameter_estimator_;
 
-	const float rls_lambda_ = 0.9999f;
-	bool rls_initialized_ = false;
-
-	// Bien luu "Neo" (Anchor) cho mo hinh nhiet
-	float rls_anchor_R_ = 0.0f;
-	float rls_anchor_T_ = 25.0f;
-
-	// Biến lưu vết
-	float rls_last_Iq_ = 0.0f;
-	float rls_last_Id_ = 0.0f;
-	float rls_last_we_ = 0.0f;
-	float rls_last_Iq_smooth_ = 0.0f; // Dùng riêng cho đạo hàm Lq
+  // bien output dung cho FOC
+  float rls_R_hat_ = 0.0f;
+  float rls_L_hat_ = 0.0f;
+  float rls_flux_hat_ = 0.0f;
+  float rls_Ld_hat_ = 0.0f;
+  float rls_Lq_hat_ = 0.0f;
 
   static Impl *g_impl_;
 };

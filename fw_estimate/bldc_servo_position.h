@@ -16,10 +16,10 @@
 
 #include "mjlib/base/assert.h"
 
-#include "fw_R_estimated/bldc_servo_structs.h"
-#include "fw_R_estimated/ccm.h"
-#include "fw_R_estimated/measured_hw_rev.h"
-#include "fw_R_estimated/motor_position.h"
+#include "fw_estimate/bldc_servo_structs.h"
+#include "fw_estimate/ccm.h"
+#include "fw_estimate/measured_hw_rev.h"
+#include "fw_estimate/motor_position.h"
 
 namespace moteus {
 

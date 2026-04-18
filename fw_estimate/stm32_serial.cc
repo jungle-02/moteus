@@ -14,7 +14,7 @@
 
 #include "mjlib/base/assert.h"
 
-#include "fw_R_estimated/stm32_serial.h"
+#include "fw_estimate/stm32_serial.h"
 
 namespace moteus {
 

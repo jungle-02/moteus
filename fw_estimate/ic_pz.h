@@ -18,8 +18,8 @@
 
 #include "mjlib/base/inplace_function.h"
 
-#include "fw_R_estimated/millisecond_timer.h"
-#include "fw_R_estimated/stm32_spi.h"
+#include "fw_estimate/millisecond_timer.h"
+#include "fw_estimate/stm32_spi.h"
 
 namespace moteus {
 class IcPz {

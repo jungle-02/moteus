@@ -20,15 +20,15 @@
 #include <atomic>
 #include <cmath>
 
-#include "fw_R_estimated/aux_common.h"
-#include "fw_R_estimated/bldc_servo_structs.h"
-#include "fw_R_estimated/ccm.h"
+#include "fw_estimate/aux_common.h"
+#include "fw_estimate/bldc_servo_structs.h"
+#include "fw_estimate/ccm.h"
 #include "mjlib/base/inplace_function.h"
 #include "mjlib/base/visitor.h"
 #include "mjlib/micro/persistent_config.h"
 #include "mjlib/micro/telemetry_manager.h"
 
-#include "fw_R_estimated/moteus_math.h"
+#include "fw_estimate/moteus_math.h"
 
 namespace moteus {
 

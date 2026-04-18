@@ -20,9 +20,9 @@
 
 #include "mjlib/base/string_span.h"
 
-#include "fw_R_estimated/ccm.h"
-#include "fw_R_estimated/stm32_dma.h"
-#include "fw_R_estimated/stm32_serial.h"
+#include "fw_estimate/ccm.h"
+#include "fw_estimate/stm32_dma.h"
+#include "fw_estimate/stm32_serial.h"
 
 namespace moteus {
 

@@ -22,12 +22,12 @@
 #include "mjlib/micro/pool_ptr.h"
 #include "mjlib/micro/telemetry_manager.h"
 
-#include "fw_R_estimated/ccm.h"
-#include "fw_R_estimated/measured_hw_rev.h"
-#include "fw_R_estimated/millisecond_timer.h"
-#include "fw_R_estimated/moteus_hw.h"
-#include "fw_R_estimated/motor_driver.h"
-#include "fw_R_estimated/stm32_digital_output.h"
+#include "fw_estimate/ccm.h"
+#include "fw_estimate/measured_hw_rev.h"
+#include "fw_estimate/millisecond_timer.h"
+#include "fw_estimate/moteus_hw.h"
+#include "fw_estimate/motor_driver.h"
+#include "fw_estimate/stm32_digital_output.h"
 
 namespace moteus {
 

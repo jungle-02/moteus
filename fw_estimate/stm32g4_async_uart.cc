@@ -15,10 +15,10 @@
 #include "mjlib/micro/atomic_event_queue.h"
 #include "mjlib/micro/callback_table.h"
 
-#include "fw_R_estimated/stm32g4_async_uart.h"
+#include "fw_estimate/stm32g4_async_uart.h"
 
-#include "fw_R_estimated/error.h"
-#include "fw_R_estimated/stm32_serial.h"
+#include "fw_estimate/error.h"
+#include "fw_estimate/stm32_serial.h"
 
 namespace base = mjlib::base;
 namespace micro = mjlib::micro;

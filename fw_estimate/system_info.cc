@@ -19,7 +19,7 @@
 
 #include "mjlib/micro/telemetry_manager.h"
 
-#include "fw_R_estimated/system_info.h"
+#include "fw_estimate/system_info.h"
 
 namespace moteus {
 

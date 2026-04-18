@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "fw_R_estimated/../motor_position.h"
+#include "fw_estimate/../motor_position.h"
 
 #include <boost/test/auto_unit_test.hpp>
 #include <boost/random.hpp>

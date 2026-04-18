@@ -18,9 +18,9 @@
 
 #include "hal/spi_api.h"
 
-#include "fw_R_estimated/ccm.h"
-#include "fw_R_estimated/moteus_hw.h"
-#include "fw_R_estimated/stm32_spi.h"
+#include "fw_estimate/ccm.h"
+#include "fw_estimate/moteus_hw.h"
+#include "fw_estimate/stm32_spi.h"
 
 namespace moteus {
 

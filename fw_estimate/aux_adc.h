@@ -18,7 +18,7 @@
 
 #include "mbed.h"
 
-#include "fw_R_estimated/ccm.h"
+#include "fw_estimate/ccm.h"
 
 namespace moteus {
 

@@ -19,7 +19,7 @@
 #include "mjlib/micro/telemetry_manager.h"
 #include "mjlib/multiplex/micro_server.h"
 
-#include "fw_R_estimated/bldc_servo.h"
+#include "fw_estimate/bldc_servo.h"
 
 namespace moteus {
 

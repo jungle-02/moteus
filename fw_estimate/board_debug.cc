@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "fw_R_estimated/board_debug.h"
+#include "fw_estimate/board_debug.h"
 
 #include <cctype>
 #include <cstdlib>
@@ -23,12 +23,12 @@
 #include "mjlib/base/tokenizer.h"
 #include "mjlib/base/visitor.h"
 
-#include "fw_R_estimated/as5047.h"
-#include "fw_R_estimated/bldc_servo.h"
-#include "fw_R_estimated/bootloader.h"
-#include "fw_R_estimated/drv8323.h"
-#include "fw_R_estimated/moteus_hw.h"
-#include "fw_R_estimated/strtof.h"
+#include "fw_estimate/as5047.h"
+#include "fw_estimate/bldc_servo.h"
+#include "fw_estimate/bootloader.h"
+#include "fw_estimate/drv8323.h"
+#include "fw_estimate/moteus_hw.h"
+#include "fw_estimate/strtof.h"
 #include "mbed.h"
 
 namespace base = mjlib::base;

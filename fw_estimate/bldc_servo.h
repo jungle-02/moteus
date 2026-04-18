@@ -24,16 +24,16 @@
 #include "mjlib/micro/pool_ptr.h"
 #include "mjlib/micro/telemetry_manager.h"
 
-#include "fw_R_estimated/aux_adc.h"
-#include "fw_R_estimated/aux_port.h"
-#include "fw_R_estimated/bldc_servo_structs.h"
-#include "fw_R_estimated/error.h"
-#include "fw_R_estimated/millisecond_timer.h"
-#include "fw_R_estimated/moteus_hw.h"
-#include "fw_R_estimated/motor_driver.h"
-#include "fw_R_estimated/motor_position.h"
-#include "fw_R_estimated/pid.h"
-#include "fw_R_estimated/simple_pi.h"
+#include "fw_estimate/aux_adc.h"
+#include "fw_estimate/aux_port.h"
+#include "fw_estimate/bldc_servo_structs.h"
+#include "fw_estimate/error.h"
+#include "fw_estimate/millisecond_timer.h"
+#include "fw_estimate/moteus_hw.h"
+#include "fw_estimate/motor_driver.h"
+#include "fw_estimate/motor_position.h"
+#include "fw_estimate/pid.h"
+#include "fw_estimate/simple_pi.h"
 
 namespace moteus {
 

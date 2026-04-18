@@ -18,7 +18,7 @@
 
 #include "mjlib/base/string_span.h"
 
-#include "fw_R_estimated/stm32_i2c_timing.h"
+#include "fw_estimate/stm32_i2c_timing.h"
 
 namespace moteus {
 

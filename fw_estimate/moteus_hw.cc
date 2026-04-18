@@ -14,10 +14,10 @@
 
 #include "mjlib/base/assert.h"
 
-#include "fw_R_estimated/moteus_hw.h"
+#include "fw_estimate/moteus_hw.h"
 
-#include "fw_R_estimated/stm32_bitbang_spi.h"
-#include "fw_R_estimated/stm32g4_adc.h"
+#include "fw_estimate/stm32_bitbang_spi.h"
+#include "fw_estimate/stm32g4_adc.h"
 
 namespace moteus {
 

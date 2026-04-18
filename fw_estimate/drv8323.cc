@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "fw_R_estimated/drv8323.h"
+#include "fw_estimate/drv8323.h"
 
 #include <functional>
 
@@ -21,9 +21,9 @@
 
 #include "mjlib/base/inplace_function.h"
 
-#include "fw_R_estimated/ccm.h"
-#include "fw_R_estimated/moteus_hw.h"
-#include "fw_R_estimated/stm32_bitbang_spi.h"
+#include "fw_estimate/ccm.h"
+#include "fw_estimate/moteus_hw.h"
+#include "fw_estimate/stm32_bitbang_spi.h"
 
 namespace micro = mjlib::micro;
 

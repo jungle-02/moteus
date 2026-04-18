@@ -17,7 +17,7 @@
 
 #include "hal/gpio_api.h"
 
-#include "fw_R_estimated/moteus_hw.h"
+#include "fw_estimate/moteus_hw.h"
 
 namespace mjlib {
 namespace base {
