@@ -156,18 +156,18 @@ class ParameterEstimatorRLS {
       bool can_obs = false;
 
       if (AbsF(iq) > AbsF(id)) {
-        if (steady && AbsF(we) > kMinOmegaForR) {
-          phi_raw = iq;
-          y_raw   = uq_comp - we * params_.Ld * id - we * params_.flux_m;
-          can_obs = true;
-        }
-      } else {
-        if (steady && AbsF(id) > kIdMinForDAxis) {
-          phi_raw = id;
-          y_raw   = ud_comp + we * params_.Lq * iq;
-          can_obs = true;
-        }
-      }
+		  if (steady && AbsF(iq) > kIqMinForQAxis) {
+			phi_raw = iq;
+			y_raw   = uq_comp - we * params_.Ld * id - we * params_.flux_m;
+			can_obs = true;
+		  }
+		} else {
+		  if (steady && AbsF(id) > kIdMinForDAxis) {
+			phi_raw = id;
+			y_raw   = ud_comp + we * params_.Lq * iq;
+			can_obs = true;
+		  }
+		}
 
       bool r_fired = false;
       if (can_obs) {
@@ -193,7 +193,7 @@ class ParameterEstimatorRLS {
       if (!r_fired) {
         const float dT = temp_lpf_ - r_anchor_T_;
         params_.R = ClampF(r_anchor_R_ * (1.0f + kAlphaCu * dT), kRMin_, kRMax_);
-        theta_R_ = params_.R; r_anchor_R_ = params_.R; r_anchor_T_ = temp_lpf_;
+        theta_R_ = params_.R;
       }
     }
 
@@ -219,11 +219,13 @@ class ParameterEstimatorRLS {
         RunScalarRLS(flux_phi_filt_, flux_y_filt_, theta_flux_, P_flux_, kLambdaFlux, 0.000005f);
 
         params_.flux_m = ClampF(theta_flux_, kFxMin_, kFxMax_);
-        theta_flux_ = params_.flux_m; flux_anchor_flux_ = params_.flux_m; flux_anchor_T_ = temp_lpf_;
+        theta_flux_ = params_.flux_m;
+        flux_anchor_flux_ = params_.flux_m;
+        flux_anchor_T_ = temp_lpf_;
       } else {
         const float dT = temp_lpf_ - flux_anchor_T_;
         params_.flux_m = ClampF(flux_anchor_flux_ * (1.0f + kAlphaFlux * dT), kFxMin_, kFxMax_);
-        theta_flux_ = params_.flux_m; flux_anchor_flux_ = params_.flux_m; flux_anchor_T_ = temp_lpf_;
+        theta_flux_ = params_.flux_m;
       }
     }
     prev_id_ = id; prev_iq_ = iq;
@@ -256,10 +258,9 @@ class ParameterEstimatorRLS {
   static constexpr float kPSlowSpeed  = 1e-8f;
   static constexpr float kPMinFloor   = 1e-9f;
 
-
-  static constexpr float kDiRunMinSmooth = 3.0f;
-  static constexpr float kLOutAlpha      = 0.08f;
-  static constexpr float kLGUIAlpha      = 0.02f;
+  static constexpr float kDiRunMinSmooth = 15.0f;
+  static constexpr float kLOutAlpha      = 0.001f;
+  static constexpr float kLGUIAlpha      = 0.0005f;
 
   // tham so kenh L
   static constexpr int   kLdqDecim       = 10;
@@ -276,7 +277,7 @@ class ParameterEstimatorRLS {
   static constexpr float kRActMax        = 25.0f;
   static constexpr float kRSteadyDI      = 0.05f;
   static constexpr float kRSteadyDWe     = 0.5f;
-  static constexpr float kMinOmegaForR   = 5.0f;
+  static constexpr float kIqMinForQAxis  = 1.0f;
   static constexpr float kIdMinForDAxis  = 0.5f;
   static constexpr float kAlphaCu        = 0.00393f;
   static constexpr float kPR_init        = 1e-6f;

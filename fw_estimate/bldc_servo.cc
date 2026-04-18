@@ -1498,22 +1498,19 @@ private:
           float dt = rate_config_.period_s;
           float current_temp_C = config_.enable_motor_temperature ? status_.filt_motor_temp_C : status_.filt_fet_temp_C;
 
-          // chi update khi co toc do
-          if (std::abs(we) > 5.0f) {
-              parameter_estimator_.Update(id, iq, ud, uq, we, dt, current_temp_C);
+	      parameter_estimator_.Update(id, iq, ud, uq, we, dt, current_temp_C);
 
-            // lay ket qua tu estimator
-            rls_R_hat_    = parameter_estimator_.GetR();
-            rls_Ld_hat_   = parameter_estimator_.GetLd();
-            rls_Lq_hat_   = parameter_estimator_.GetLq();
-            rls_L_hat_    = parameter_estimator_.GetLq();
-            rls_flux_hat_ = parameter_estimator_.GetFai();
+			// lay ket qua tu estimator
+		  rls_R_hat_    = parameter_estimator_.GetR();
+	      rls_Ld_hat_   = parameter_estimator_.GetLd();
+		  rls_Lq_hat_   = parameter_estimator_.GetLq();
+		  rls_L_hat_    = parameter_estimator_.GetLq();
+		  rls_flux_hat_ = parameter_estimator_.GetFai();
 
-            // cap nhat telemetry
-            status_.rls_R_hat = rls_R_hat_;
-            status_.rls_L_hat = rls_L_hat_;
-            status_.rls_flux_hat = rls_flux_hat_;
-          }
+		  // cap nhat telemetry
+		  status_.rls_R_hat = rls_R_hat_;
+		  status_.rls_L_hat = rls_L_hat_;
+		  status_.rls_flux_hat = rls_flux_hat_;
         }
         // --- KET THUC estimator ---
 
@@ -1702,21 +1699,23 @@ private:
     status_.mode = kCalibrationComplete;
 
     // --- KHOI TAO CHO RLS  ---
-
+    if (!rls_initialized_) {
     // khoi tao tham so ban dau cho RLS
-	const float init_R = motor_.resistance_ohm;
-	const float init_flux = (motor_.Kv > 0.0f)
-		? (60.0f / (1.73205081f * k2Pi * motor_.Kv * (motor_.poles / 2.0f)))
-		: 0.0027f;
-	const float init_Lq = (std::abs(config_.pid_dq.ki) > 1e-6f)
-		? (motor_.resistance_ohm * config_.pid_dq.kp / config_.pid_dq.ki)
-		: 2.1715e-05f;
-	const float current_temp_C = config_.enable_motor_temperature
-		? status_.filt_motor_temp_C
-		: status_.filt_fet_temp_C;
+		const float init_R = motor_.resistance_ohm;
+		const float init_flux = (motor_.Kv > 0.0f)
+			? (60.0f / (1.73205081f * k2Pi * motor_.Kv * (motor_.poles / 2.0f)))
+			: 0.0027f;
+		const float init_Lq = (std::abs(config_.pid_dq.ki) > 1e-6f)
+			? (motor_.resistance_ohm * config_.pid_dq.kp / config_.pid_dq.ki)
+			: 2.1715e-05f;
+		const float current_temp_C = config_.enable_motor_temperature
+			? status_.filt_motor_temp_C
+			: status_.filt_fet_temp_C;
 
-	// reset estimator voi tham so ban dau
-	parameter_estimator_.Reset(init_R, init_Lq, init_flux, current_temp_C);
+		// reset estimator voi tham so ban dau
+		parameter_estimator_.Reset(init_R, init_Lq, init_flux, current_temp_C);
+		rls_initialized_ = true;
+	}
 	// --------------------------------------
 
   }
@@ -2612,6 +2611,7 @@ private:
 
   // object uoc luong tham so
   ParameterEstimatorRLS parameter_estimator_;
+  bool rls_initialized_ = false;
 
   // bien output dung cho FOC
   float rls_R_hat_ = 0.0f;
