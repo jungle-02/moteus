@@ -225,7 +225,7 @@ class MPCKalmanEstimator {
     const float Ts   = mpc_.Ts;
     const float J    = motor_.J;
     const float Bf   = motor_.B;
-    const float p_f  = static_cast<float>(motor_.poles / 2);
+    const float p_f  = static_cast<float>(motor_.poles) / 2.0f;
     const float pm   = motor_.pm;
     const float Iq_max = motor_.Iq_max;
     const float Te_max = 1.5f * p_f * pm * Iq_max;
@@ -751,7 +751,9 @@ class MPCKalmanEstimator {
           *thref = omega_max * t;
         } else if (t < 2.0f * t_step) {
           *wref  = -omega_max;
-          *thref = omega_max * (t - t_step);
+          // Angle at end of first phase: omega_max * t_step
+          // Then decreasing at omega_max rad/s for (t - t_step) seconds.
+          *thref = omega_max * t_step - omega_max * (t - t_step);
         } else {
           *wref  = 0.0f;
           *thref = 0.0f;
@@ -818,13 +820,21 @@ class MPCKalmanEstimator {
   // ── 2×2 operations ───────────────────────────────────────────────────────
 
   /// Ainv = A⁻¹  for a 2×2 matrix.
+  /// If the matrix is singular (|det| < eps), Ainv is zeroed to avoid
+  /// propagating invalid values; the Kalman gain will then be zero and
+  /// the filter coasts on the prediction.
   static void Inv22(const float A[4], float Ainv[4]) {
-    const float det     = A[0] * A[3] - A[1] * A[2];
-    const float inv_det = (det != 0.0f) ? (1.0f / det) : 0.0f;
-    Ainv[0] =  A[3] * inv_det;
-    Ainv[1] = -A[1] * inv_det;
-    Ainv[2] = -A[2] * inv_det;
-    Ainv[3] =  A[0] * inv_det;
+    const float det = A[0] * A[3] - A[1] * A[2];
+    constexpr float kEps = 1e-30f;
+    if (det > kEps || det < -kEps) {
+      const float inv_det = 1.0f / det;
+      Ainv[0] =  A[3] * inv_det;
+      Ainv[1] = -A[1] * inv_det;
+      Ainv[2] = -A[2] * inv_det;
+      Ainv[3] =  A[0] * inv_det;
+    } else {
+      Ainv[0] = Ainv[1] = Ainv[2] = Ainv[3] = 0.0f;
+    }
   }
 
   // ── Nc×Nc Cholesky inversion ──────────────────────────────────────────────
@@ -843,6 +853,11 @@ class MPCKalmanEstimator {
           s -= L[i * kNc + k] * L[j * kNc + k];
         }
         if (i == j) {
+          // If s <= 0 the matrix is not positive-definite (numerical drift).
+          // Clamping to a tiny positive value keeps the factorisation
+          // well-defined; the resulting approximate inverse degrades
+          // gracefully — H is SPD by construction so this should not
+          // occur in normal operation.
           L[i * kNc + i] = (s > 0.0f) ? std::sqrt(s) : 1e-12f;
         } else {
           L[i * kNc + j] = s / L[j * kNc + j];
