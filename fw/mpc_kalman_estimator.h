@@ -617,8 +617,8 @@ class MPCKalmanEstimator {
     for (int k = 0; k < kNcon * kNc; k++) { Mineq_[k] = 0.0f; }
     for (int i = 0; i < kNc; i++) {
       for (int j = 0; j <= i; j++) {
-        Mineq_[i * kNc + j]         =  1.0f;   //  S
-        Mineq_[(i + kNc) * kNc + j] = -1.0f;   // -S
+        Mineq_[i * kNc + j]         =  1.0f;   // upper constraint block (+S)
+        Mineq_[(i + kNc) * kNc + j] = -1.0f;   // lower constraint block (-S)
       }
     }
 
