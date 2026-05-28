@@ -1,5 +1,38 @@
 # Lưu đồ Giải Thuật Hệ Thống Motor Control với MPC+Kalman+SMO+RLS
 
+## Quy trình thực thi SVPWM thực tế trong firmware moteus
+
+Phần này mô tả đúng luồng chạy thực tế trong firmware (`fw/bldc_servo.cc`):
+
+1. Timer PWM phát sinh update interrupt, vào `GlobalInterrupt()` rồi `ISR_HandleTimer()`.
+2. Trong `ISR_DoTimer()`:
+   - Trigger ADC đồng bộ bằng `TriggerAllAdcs()`.
+   - Chia nhịp điều khiển bằng `phase_ = (phase_ + 1) & rate_config_.interrupt_mask`.
+   - Gọi `ISR_DoSenseCritical()` để chốt mẫu quan trọng.
+   - Set `PendSV` để chạy phần điều khiển mức ưu tiên thấp.
+3. Trong `ISR_DoTimerLowerPriority()` (PendSV):
+   - Gọi `ISR_DoSense()` để hoàn tất đọc cảm biến.
+   - Tính `electrical_theta`, rồi lấy `sin/cos` bằng `cordic_`.
+   - Gọi `ISR_CalculateCurrentState(sin_cos)` để tính dòng dq.
+   - Gọi `ISR_DoControl(sin_cos, data)` để chọn và chạy mode điều khiển.
+4. Trong `ISR_DoControl()`:
+   - Kiểm tra mode/fault/timeout.
+   - Chọn nhánh tương ứng (`kVoltageFoc`, `kVoltageDq`, `kCurrent`, `kPosition`, ...).
+5. Với nhánh điều khiển điện áp dq:
+   - `ISR_CalculatePhaseVoltage()` thực hiện biến đổi ngược dq->abc (`InverseDqTransform`).
+6. Thực hiện SVPWM tại `ISR_DoBalancedVoltageControl()` theo min/max injection:
+   - Chuẩn hóa điện áp pha: `pwm_in = phase_voltage / bus_V`.
+   - Tìm `pwmmin`, `pwmmax`.
+   - Tính offset: `offset = 0.5f * (pwmmin + pwmmax) - 0.5f`.
+   - Dịch đều 3 pha theo offset (tương đương SVPWM).
+7. Xuất PWM phần cứng trong `ISR_DoPwmControl()`:
+   - Giới hạn duty bằng `LimitPwm()` theo `min_pwm/max_pwm`.
+   - Đổi sang CCR (`pwm_counts_`) và ghi `CCR1/CCR2/CCR3`.
+   - Gọi `motor_driver_->PowerOn()`.
+8. Kết thúc chu kỳ:
+   - `ISR_DoTimerLowerPriority()` enable lại IRQ PWM.
+   - Chu kỳ kế tiếp lặp lại theo tần số PWM.
+
 ## Tổng Quan Hệ Thống (System Overview)
 
 ```
@@ -563,4 +596,3 @@ Cấu trúc này cho phép hệ thống:
 ✓ Ước lượng trạng thái chính xác
 ✓ Điều khiển tối ưu với ràng buộc
 ✓ Suy giảm nhẹ khi xảy ra lỗi
-
